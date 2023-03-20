@@ -16,7 +16,7 @@
     "use_init": true,
     "strength_0_no_init": true,
     "strength": 1,
-    "init_image": "F:/a.png",
+    "init_image": "F:/gg/templates/init_img/00.png",
     "use_mask": false,
     "use_alpha_as_mask": false,
     "invert_mask": false,
@@ -31,9 +31,9 @@
     "reroll_blank_frames": "reroll",
     "precision": "autocast",
     "timestring": "a",
-    "outdir": "F:/gg/templates/to_proccess\\magic atom\\0000000",
+    "outdir": "F:/gg/templates/to_proccess\\RAW photo, enchanted city\\0000000",
     "prompts": {
-        "0": "magic atom --neg (noise), (blur), (fog), (ugly), (text)"
+        "0": "RAW photo, enchanted city, 8k, uhd, dslr, soft lighting, high quality, film grain, Fujifilm XT3 --neg (noise), (blur), (fog), (text), (NSFW), (deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime:1.4), close up, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck"
     },
     "animation_mode": "3D",
     "max_frames": 900,
@@ -42,7 +42,7 @@
     "zoom": "0:(0)",
     "translation_x": "0:(0)",
     "translation_y": "0:(0)",
-    "translation_z": "0:(0.5)",
+    "translation_z": "0:(1.75)",
     "rotation_3d_x": "0:(0)",
     "rotation_3d_y": "0:(0)",
     "rotation_3d_z": "0:(0)",
@@ -52,7 +52,7 @@
     "perspective_flip_gamma": "0:(0)",
     "perspective_flip_fv": "0:(53)",
     "noise_schedule": "0:(0.065)",
-    "strength_schedule": "0:(0.75)",
+    "strength_schedule": "0:(0.45)",
     "contrast_schedule": "0:(1.0)",
     "cfg_scale_schedule": "0:(7)",
     "pix2pix_img_cfg_scale_schedule": "0:(1.5)",
