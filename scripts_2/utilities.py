@@ -31,17 +31,29 @@ from googletrans import Translator
 """ from scripts_2.utilities import high_img
 high_img_f = high_img(4)
 
-high_img_f.run({
-    'face': False, # reconstruct face
-    'path': f'./test_inp/{file}', # image path
-    'w_i': 480, # width to be resized 
-    'h_i': 270, # height to be resized
-    'w_o': 1920, # width output 
-    'h_o': 1080, # height output    
-    'out_path': f'./test/{file}', # image output location
-    'return_out': 'nothing', # return the data to use later
-    'show_image': False, # show output
-}) """
+high_img_f.run(
+face = False, # reconstruct face
+path = f'F:/gg/templates/to_proccess/rave party, beautiful --neg (blur)/0000000/interpolated_frames_film_a/{file}', # image path
+w_i = 512, # width to be resized 
+h_i = 512, # height to be resized
+w_o = 1920, # width to be resized 
+h_o = 1080, # height to be resized    
+out_path = f'./test/{file}', # image output location
+return_out = 'nothing', # return the data to use later
+show_image = False, # show output
+) """
+
+# interpolated frames
+
+""" from scripts_2.utilities import interp_fram
+
+interp_fram.run(
+       times_to_interpolate= 2, #multiplier of the frames
+       path ='F:/gg/templates/to_proccess/rave party, beautiful --neg (blur)/0000000', #input folder with pngs
+       out_path= 'F:/gg/test_inter', # output folder
+       w_o= 512, # width output
+       h_o= 512, # height output 
+) """
 
 class high_img:
     def __init__(self, upscale):        
@@ -78,20 +90,20 @@ class high_img:
                     bg_upsampler=self.upsampler)
         
 
-    def run(self, obj):
-        frame = cv2.imread(obj['path'], cv2.IMREAD_UNCHANGED)
-        frame = cv2.resize(frame, (obj['w_i'],obj['h_i']))
-        if obj['face']:                    
+    def run(self, face, path, w_i, h_i, w_o, h_o, out_path, return_out, show_image):
+        frame = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        frame = cv2.resize(frame, (w_i,h_i))
+        if face:                    
             _, _, output = self.face_enhancer.enhance(frame, has_aligned=False, only_center_face=False, paste_back=True)
         else:
             output, _ = self.upsampler.enhance(frame, outscale=self.upscale)
-        if obj['w_i']*self.upscale !=  obj['w_o'] or obj['h_i']*self.upscale != obj['h_o']:     
-            output = cv2.resize(output,(obj['w_o'],obj['h_o']))
-        cv2.imwrite(obj['out_path'], output)
-        if obj['show_image']:
+        if w_i*self.upscale !=  w_o or h_i*self.upscale != h_o:     
+            output = cv2.resize(output,(w_o,h_o))
+        cv2.imwrite(out_path, output)
+        if show_image:
             plt.imshow(output)
             plt.show()
-        if obj['return_out'] == '':
+        if return_out == '':
             return output
 
     def __del__(self):
@@ -211,12 +223,14 @@ def interpolate_recursively(
 
 class interp_fram:
     
-    def run(obj):
-        times_to_interpolate = obj['times_to_interpolate'] or 1
+    def run(path, w_o, h_o, out_path, times_to_interpolate):
+        if not times_to_interpolate:
+           times_to_interpolate = 1
+
 
         interpolator = Interpolator()
         print(torch.cuda.memory_summary())
-        input_frames = load_images_from_folder(obj['path'], obj['w_o'], obj['h_o'])
+        input_frames = load_images_from_folder(path, w_o, h_o)
         print(torch.cuda.memory_summary())
         print('interpolating frames')
         frames = list(
@@ -225,7 +239,7 @@ class interp_fram:
         print(f'video with {len(frames)} frames')
         print('saving frames')
         for i, single_frame in tqdm(enumerate(frames)):
-            media.write_image(f"{obj['out_path']}/output_{i:04d}.png", single_frame)
+            media.write_image(f"{out_path}/output_{i:04d}.png", single_frame)
 
         media.show_video(frames, fps=60, title='FILM interpolated video')
         del interpolator
