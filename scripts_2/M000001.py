@@ -55,7 +55,7 @@ M000001 = {
             "4500": "A psychedelic forest of towering, luminescent trees and strange, otherworldly creatures."
         },
         {
-            "0": "A neon-colored abstract cityscape with towering buildings and flashing lights. The only sign of life is a lone figure in the distance.",
+            "0": "A neon-colored cityscape with towering buildings and flashing lights. The only sign of life is a lone figure in the distance.",
             "90": "A kaleidoscope of shapes and colors twisting and morphing into each other in a mesmerizing display.",
             "180": "An intricate network of glowing circuits and wires pulsing with energy, almost like a living organism.",
             "270": "A vast, empty space with a single object in the center - a glowing orb that seems to be drawing all the energy and light towards it.",
@@ -109,8 +109,13 @@ M000001 = {
         }
     ],
     'music_name': 
-    [
-        'M000001.mp3',
-        'M000002.mp3'    
-    ]
+        [
+            'M000001',
+            'M000002'    
+        ],
+    'n_frames_music':
+        [   
+            16,
+            20          
+        ]
 }
