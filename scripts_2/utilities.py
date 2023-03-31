@@ -95,13 +95,14 @@ class high_img:
             return output
 
     def __del__(self):
+        torch.cuda.empty_cache()
+        gc.collect()
         del self.upsampler
         del self.model
         del self.face_enhancer
         del self.upscale
         print('delete')
-        torch.cuda.empty_cache()
-        gc.collect()
+
 
 
 def load_images_from_folder(folder_path, w_o, h_o):
@@ -170,6 +171,13 @@ class Interpolator:
     if self._align is not None:
       image = tf.image.crop_to_bounding_box(image, **bbox_to_crop)
     return image.numpy()
+  
+def __del__(self):
+
+    del self._model
+    tf.compat.v1.reset_default_graph()
+    tf.keras.backend.clear_session()
+    gc.collect()
 
 def _recursive_generator(
     frame1: np.ndarray, frame2: np.ndarray, num_recursions: int,
@@ -202,12 +210,14 @@ def interpolate_recursively(
 
 
 class interp_fram:
+    
     def run(obj):
         times_to_interpolate = obj['times_to_interpolate'] or 1
 
         interpolator = Interpolator()
-        
+        print(torch.cuda.memory_summary())
         input_frames = load_images_from_folder(obj['path'], obj['w_o'], obj['h_o'])
+        print(torch.cuda.memory_summary())
         print('interpolating frames')
         frames = list(
                 interpolate_recursively(input_frames, times_to_interpolate,
@@ -219,6 +229,8 @@ class interp_fram:
 
         media.show_video(frames, fps=60, title='FILM interpolated video')
         del interpolator
-        tf.compat.v1.reset_default_graph()
+        frames = []
+        input_frames = []
         tf.keras.backend.clear_session()
+        tf.compat.v1.reset_default_graph()
         gc.collect()
