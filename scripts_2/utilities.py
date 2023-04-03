@@ -55,6 +55,28 @@ interp_fram.run(
        h_o= 512, # height output 
 ) """
 
+# video from frames
+
+""" from scripts_2.utilities import create_video_from_pngs
+create_video_from_pngs("./test",f"./result3.mp4",30) """
+
+def create_video_from_pngs(directory_path, output_file_path, fps=30, w = 1920, h = 1080):
+    image_paths = []
+    for root, dirs, files in os.walk(directory_path):
+        for file in files:
+            if file.endswith('.png'):
+                image_paths.append(os.path.join(root, file))
+    if not image_paths:
+        print('No PNG images found in directory:', directory_path)
+        return
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video_writer = cv2.VideoWriter(output_file_path, fourcc, fps, (w, h), True)
+    for image_path in image_paths:
+        image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+        image = cv2.resize(image,(w,h))
+        video_writer.write(image)
+    video_writer.release()
+
 class high_img:
     def __init__(self, upscale):        
         netscale = 4
