@@ -24,6 +24,11 @@ from pydub import AudioSegment
 import math
 import googletrans
 from googletrans import Translator
+#
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip
+
+#
+import shutil
 
 #example usage:
 
@@ -59,6 +64,33 @@ interp_fram.run(
 
 """ from scripts_2.utilities import create_video_from_pngs
 create_video_from_pngs("./test",f"./result3.mp4",30) """
+
+# merge video with audio
+""" from scripts_2.utilities import merge_video_with_audio
+
+merge_video_with_audio('F:/gg/result3.mp4','F:/gg/musics/M000001.wav','F:/gg/merged_video2.mp4')
+"""
+
+# copy_file_and_rename
+
+""" 
+from scripts_2.utilities import copy_file_and_rename
+
+copy_file_and_rename(path_first_img,temp_folder,'a_000000001.png')
+file_input location, file_output location and new name"""
+
+# def retrieve_frames(path_input_video, path_output_frames)
+
+""" from scripts_2.utilities import retrieve_frames
+
+retrieve_frames(path_input_video, path_output_frames) """
+
+# def remove_temp_folder(temp_folder):
+
+""" from scripts_2.utilities import remove_temp_folder
+
+remove_temp_folder(temp_folder) """
+
 
 def create_video_from_pngs(directory_path, output_file_path, fps=30, w = 1920, h = 1080):
     image_paths = []
@@ -147,14 +179,14 @@ def load_images_from_folder(folder_path, w_o, h_o):
             img_url = os.path.join(folder_path, filename)
             image_data = tf.io.read_file(img_url)
             image = tf.io.decode_image(image_data, channels=3)
-            image_numpy = tf.cast(image, dtype=tf.float32) #.numpy()
-            image_numpy = tf.image.resize(
+            image_numpy = tf.cast(image, dtype=tf.float32).numpy() #.numpy()
+            """ image_numpy = tf.image.resize(
                 images=image_numpy,
                 size=[ h_o,  w_o],
                 method=tf.image.ResizeMethod.BILINEAR,
                 preserve_aspect_ratio=False,
                 antialias=True,
-            ).numpy()
+            ).numpy() """
             images.append(image_numpy / _UINT8_MAX_F)
     return images
 
@@ -251,22 +283,84 @@ class interp_fram:
 
 
         interpolator = Interpolator()
-        print(torch.cuda.memory_summary())
+        #print(torch.cuda.memory_summary())
         input_frames = load_images_from_folder(path, w_o, h_o)
-        print(torch.cuda.memory_summary())
+        #print(torch.cuda.memory_summary())
         print('interpolating frames')
         frames = list(
                 interpolate_recursively(input_frames, times_to_interpolate,
                 interpolator))
         print(f'video with {len(frames)} frames')
-        print('saving frames')
+        """ print('saving frames')
         for i, single_frame in tqdm(enumerate(frames)):
-            media.write_image(f"{out_path}/output_{i:04d}.png", single_frame)
-
+            media.write_image(f"{out_path}/output_{i:04d}.png", single_frame) """
+        
         media.show_video(frames, fps=60, title='FILM interpolated video')
+        media.write_video(f"{out_path}/output.mp4", frames, fps=60)
         del interpolator
         frames = []
         input_frames = []
         tf.keras.backend.clear_session()
         tf.compat.v1.reset_default_graph()
         gc.collect()
+
+def merge_video_with_audio(video_path, audio_path, output_path):
+    # create VideoFileClip and AudioFileClip objects
+    video_clip = VideoFileClip(video_path)
+    audio_clip = AudioFileClip(audio_path)
+
+    # set the duration of the final video to be the same as the video clip
+    duration_audio = audio_clip.duration
+    duration_video = video_clip.duration
+
+    if duration_audio <= duration_video:
+       final_duration = duration_audio
+    else:
+       final_duration = duration_video
+
+    # set the audio of the video clip to the audio clip
+    video_clip = video_clip.set_audio(audio_clip)
+
+    # create a CompositeVideoClip object with the video clip
+    final_clip = CompositeVideoClip([video_clip.set_duration(final_duration)])
+
+    # write the final clip to a file
+    final_clip.write_videofile(output_path)
+
+
+
+def copy_file_and_rename(file_path,destination_folder,new_name):
+    shutil.copy(file_path, destination_folder +'/'+ new_name)
+
+
+
+def retrieve_frames(path_input_video, path_output_frames): 
+    # Open the video file
+    video = cv2.VideoCapture(path_input_video)
+
+    # Initialize frame counter
+    frame_count = 0
+
+    # Loop through each frame in the video
+    while True:
+        # Read the next frame from the video
+        ret, frame = video.read()
+
+        # If there are no more frames, break out of the loop
+        if not ret:
+            break
+
+        # Save the frame as an image file
+        cv2.imwrite(f"{path_output_frames}/a_{frame_count:07d}.png", frame)
+
+
+        # Increment the frame counter
+        frame_count += 1
+
+    # Release the video file
+    video.release()
+
+def remove_temp_folder(temp_folder):
+    if os.path.exists(temp_folder):
+        shutil.rmtree(temp_folder)
+    os.mkdir(temp_folder)
