@@ -30,6 +30,9 @@ from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip
 #
 import shutil
 
+#
+import re
+
 #example usage:
 
 # high img res
@@ -90,6 +93,10 @@ retrieve_frames(path_input_video, path_output_frames) """
 """ from scripts_2.utilities import remove_temp_folder
 
 remove_temp_folder(temp_folder) """
+
+# from scripts_2.utilities import split_text_to_dict
+
+""" output = split_text_to_dict(txt) """
 
 
 """ def create_video_from_pngs(directory_path, output_file_path, fps=60, w = 1920, h = 1080):
@@ -412,3 +419,12 @@ def remove_temp_folder(temp_folder):
     if os.path.exists(temp_folder):
         shutil.rmtree(temp_folder)
     os.mkdir(temp_folder)
+
+
+def split_text_to_dict(text):
+    lines = filter(None, re.split(r'(?<=[.!?])\s', text))  # Split text using regular expression to match dots, exclamation marks, and question marks followed by whitespace, and filter out empty lines
+    result = {}
+    for i, line in enumerate(lines):
+        result[str(i)] = line.strip()  # Add line to the dictionary with the key as the line number and the value as the line text
+    result.pop(str(len(result)-1), None)  # Remove the last item from the dictionary
+    return result
