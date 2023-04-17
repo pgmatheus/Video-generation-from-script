@@ -92,7 +92,7 @@ retrieve_frames(path_input_video, path_output_frames) """
 remove_temp_folder(temp_folder) """
 
 
-def create_video_from_pngs(directory_path, output_file_path, fps=30, w = 1920, h = 1080):
+""" def create_video_from_pngs(directory_path, output_file_path, fps=60, w = 1920, h = 1080):
     image_paths = []
     for root, dirs, files in os.walk(directory_path):
         for file in files:
@@ -107,7 +107,55 @@ def create_video_from_pngs(directory_path, output_file_path, fps=30, w = 1920, h
         image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
         image = cv2.resize(image,(w,h))
         video_writer.write(image)
+    video_writer.release() """
+
+def create_video_from_pngs(directory_path, output_file_path, music_path='', temp_video= 'F:/gg/templates/temp_video.mp4', fps=60, w = 1920, h = 1080):
+    image_paths = []
+    if os.path.exists(output_file_path):
+        os.remove(output_file_path)
+    for root, dirs, files in os.walk(directory_path):
+        for file in files:
+            if file.endswith('.png'):
+                image_paths.append(os.path.join(root, file))
+    if not image_paths:
+        print('No PNG images found in directory:', directory_path)
+        return
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    if music_path == '':
+        video_writer = cv2.VideoWriter(output_file_path, fourcc, fps, (w, h), True)
+    else:
+        if os.path.exists(temp_video):
+            os.remove(temp_video)
+        video_writer = cv2.VideoWriter(temp_video, fourcc, fps, (w, h), True)
+    for image_path in image_paths:
+        image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+        image = cv2.resize(image,(w,h))
+        video_writer.write(image)
     video_writer.release()
+
+    if music_path != '':
+        video_clip = VideoFileClip(temp_video)
+        audio_clip = AudioFileClip(music_path)
+
+        # set the duration of the final video to be the same as the video clip
+        duration_audio = audio_clip.duration
+        duration_video = video_clip.duration
+
+        if duration_audio <= duration_video:
+            final_duration = duration_audio
+        else:
+            final_duration = duration_video
+
+        #final_duration = math.floor(final_duration)
+
+        # Define the FFmpeg command with -shortest option
+        command = f"ffmpeg -i {temp_video} -i {music_path} -c:v copy -c:a aac -strict experimental -t {final_duration} {output_file_path}"
+
+        # Execute the FFmpeg command using subprocess
+        subprocess.call(command, shell=True)
+
+
+
 
 class high_img:
     def __init__(self, upscale):        
@@ -325,7 +373,7 @@ def merge_video_with_audio(video_path, audio_path, output_path):
     final_clip = CompositeVideoClip([video_clip.set_duration(final_duration)])
 
     # write the final clip to a file
-    final_clip.write_videofile(output_path)
+    final_clip.write_videofile(output_path, threads=4, preset='slow')
 
 
 
