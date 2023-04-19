@@ -98,6 +98,10 @@ remove_temp_folder(temp_folder) """
 
 """ output = split_text_to_dict(txt) """
 
+# from scripts_2.utilities import get_frames_per_interval
+""" final_final_deforum, audio_duration, srt_interval =
+get_frames_per_interval(project_folder, 0.65, 4) #root  project_folder, delay and cadence"""
+
 
 """ def create_video_from_pngs(directory_path, output_file_path, fps=60, w = 1920, h = 1080):
     image_paths = []
@@ -421,10 +425,105 @@ def remove_temp_folder(temp_folder):
     os.mkdir(temp_folder)
 
 
-def split_text_to_dict(text):
+""" def split_text_to_dict(text):
     lines = filter(None, re.split(r'(?<=[.!?])\s', text))  # Split text using regular expression to match dots, exclamation marks, and question marks followed by whitespace, and filter out empty lines
     result = {}
     for i, line in enumerate(lines):
         result[str(i)] = line.strip()  # Add line to the dictionary with the key as the line number and the value as the line text
     result.pop(str(len(result)-1), None)  # Remove the last item from the dictionary
+    return result """
+
+""" def split_text_to_dict(text):
+    lines = filter(None, re.split(r'(?<=[.!?])\s', text.replace("\n", " ")))  # Split text using regular expression to match dots, exclamation marks, and question marks followed by whitespace, replace new lines with spaces, and filter out empty lines
+    result = {}
+    for i, line in enumerate(lines):
+        result[str(i)] = line.strip()  # Add line to the dictionary with the key as the line number and the value as the line text
+    result.pop(str(len(result)-1), None)  # Remove the last item from the dictionary
+    return result """
+
+def split_text_to_dict(text):
+    lines = filter(None, re.split(r'(?<=[.!?])\s', re.sub(r'\s{2,}', ' ', text.replace("\n", " "))))  # Split text using regular expression to match dots, exclamation marks, and question marks followed by whitespace, replace new lines with spaces, replace two or more spaces with one space, and filter out empty lines
+    result = {}
+    for i, line in enumerate(lines):
+        result[str(i)] = line.strip()  # Add line to the dictionary with the key as the line number and the value as the line text
     return result
+
+
+
+
+def get_frames_per_interval(project_path, delay = 0.5, cadence = 4):
+
+  durations = []
+  temp_frames_deforum = []
+  final_temp_deforum = []
+
+
+  #get durations of each audio
+  for folder_name in os.listdir(os.path.join(f"{project_path}\\audio\\")):
+    for filename in os.listdir(os.path.join(f"{project_path}\\audio\\{folder_name}")):
+      duration = sf.SoundFile(os.path.join(f"{project_path}\\audio\\{folder_name}\\{filename}"))
+      durations.append(duration.frames / duration.samplerate)
+
+  #min frames needed
+  for index, i in enumerate(durations):
+    temp_val = i + delay
+    frames_integer_part = round(temp_val*15)
+    temp_frames_deforum.append(frames_integer_part)
+
+  
+  # calculate the frames needed of each deforum animation
+  for index in range(len(temp_frames_deforum)):
+    cont = 0
+    cond = False    
+    if os.path.exists(f"{project_path}\\img\\{index:07d}\\0000000.png"):
+        cont = cont + temp_frames_deforum[index]
+        for index2 in range(index+1,len(temp_frames_deforum)):
+          if not os.path.exists(f"{project_path}\\img\\{index2:07d}\\0000000.png") and cond == False:
+            cont = cont + temp_frames_deforum[index2]
+          else:
+            cond == True
+        final_temp_deforum.append(cont)
+    else:
+      final_temp_deforum.append(0)
+
+
+
+
+  final_final_deforum = [0] * len(final_temp_deforum)
+
+  # recalculate frames for deforum precision
+  for index, i in enumerate(final_temp_deforum):
+    
+    if i != 0:
+      final_final_deforum[index] = final_temp_deforum[index] + final_temp_deforum[index]%(cadence) + 1
+    else:
+      final_final_deforum[index] = 0
+  srt_frames_needed_adjusted = adjust_subtitles(temp_frames_deforum,final_final_deforum,cadence)
+  
+  audio_duration, srt_interval = get_subtitle_times(srt_frames_needed_adjusted)
+  return final_final_deforum, audio_duration, srt_interval
+
+
+def adjust_subtitles(subtitle, animation, cad):
+  for index in range(len(subtitle)):
+    if animation[index] > subtitle[index]:
+      acc = animation[index]
+      for index2 in range(index, len(subtitle)):
+
+        if acc > subtitle[index2]:
+          acc = acc - subtitle[index2]
+        elif acc == subtitle[index2]:
+          acc = -1
+        if acc < 2*cad+1 and acc > 0:
+          subtitle[index2] = subtitle[index2] + acc
+          acc = -1
+  return subtitle
+      
+def get_subtitle_times(srts, frames = 15, delay = 0.5):
+  srt_interval = {}
+  acc = 0
+  for index, srt_time in enumerate(srts):    
+    srt_interval[index] = {'start_time': round(acc + delay,3), "end_time": round(acc  + srt_time/frames,3)}
+    acc = acc + srt_time/frames
+  audio_duration = [round(num/15,3) for num in srts]
+  return audio_duration, srt_interval

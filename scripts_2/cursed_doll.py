@@ -11,7 +11,10 @@ cursed_doll = {
     ],
 
     'text_spoken': [
-        """I was cleaning out my late grandmother's attic after her passing, sorting through old trinkets and memories. As I rummaged through dusty boxes, I stumbled upon a small, antique doll hidden in the corner. It had porcelain skin, curly golden hair, and big blue eyes that seemed to stare right through me. Despite the storm outside, a chill ran down my spine as I picked it up.
+        """I was cleaning out my late grandmother's attic after her passing, sorting through old trinkets and memories. 
+        As I rummaged through dusty boxes, I stumbled upon a small, antique doll
+        hidden in the corner. It had porcelain skin, long hair, and eyes that seemed to stare right through me. Despite the storm outside, a
+        chill ran down my spine as I picked it up.
 
 As soon as I touched the doll, I felt a strange sensation, as if someone was watching me. I quickly brushed it off as my imagination playing tricks on me and placed the doll on a shelf in my bedroom. But as the night went on, I couldn't shake off the feeling of being watched.
 
