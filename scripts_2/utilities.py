@@ -119,7 +119,7 @@ alp.run = ('./input_img.png','./output_file_location.png')
 del alp """
 
 # from scripts_2.utilities import merge_bg
-""" merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img, offset_x=0, offset_y=0) """
+""" merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img, offset_x=0, offset_y=200, w_res = 400, h_res = 320) """
 
 def create_video_from_pngs(directory_path, output_file_path, music_path='', temp_video= 'F:/gg/templates/temp_video.mp4', fps=60, w = 1920, h = 1080):
     image_paths = []
@@ -450,7 +450,58 @@ def split_text_to_dict(text):
     return result
 
 
+def merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img, offset_x=0, offset_y=0, resize_ratio=0.25, w_res=0, h_res=0):
+    foreground = cv2.imread(lip_path_img)
+    alpha = cv2.imread(alpha_path_img)
+    background = cv2.imread(background_path_img)
 
+    # Resize foreground and alpha images
+    """ foreground = cv2.resize(foreground, None, fx=resize_ratio, fy=resize_ratio)
+    alpha = cv2.resize(alpha, None, fx=resize_ratio, fy=resize_ratio) """
+
+    if w_res != 0 and h_res != 0:
+        foreground = cv2.resize(foreground, [w_res,h_res])
+        alpha = cv2.resize(alpha, [w_res,h_res])
+
+    # Convert uint8 to float
+    foreground = foreground.astype(float)
+    alpha = alpha.astype(float)/255
+    background = background.astype(float)
+
+    # Get the dimensions of the foreground image
+    rows_fg, cols_fg, channels_fg = foreground.shape
+
+    # Calculate the starting and ending row and column indices for placing the foreground image in the background
+    start_row = max(0, offset_y)
+    end_row = min(offset_y + rows_fg, background.shape[0])
+    start_col = max(0, offset_x)
+    end_col = min(offset_x + cols_fg, background.shape[1])
+
+    # Calculate the actual offset to be used after adjusting for the starting indices
+    offset_x_actual = start_col - offset_x
+    offset_y_actual = start_row - offset_y
+
+    # Extract the region of interest (ROI) in the background image where the foreground image will be placed
+    roi_bg = background[start_row:end_row, start_col:end_col]
+
+    # Add the offset to the foreground image
+    M = np.float32([[1, 0, offset_x_actual], [0, 1, offset_y_actual]])
+    foreground = cv2.warpAffine(foreground, M, (roi_bg.shape[1], roi_bg.shape[0]))
+    alpha = cv2.warpAffine(alpha, M, (roi_bg.shape[1], roi_bg.shape[0]))
+
+    # Multiply the foreground with the alpha matte
+    foreground = cv2.multiply(alpha, foreground)
+
+    # Multiply the ROI of the background with (1 - alpha)
+    roi_bg = cv2.multiply(1.0 - alpha, roi_bg)
+
+    # Add the masked foreground and ROI of the background
+    merged_roi = cv2.add(foreground, roi_bg)
+
+    # Place the merged ROI back into the background image
+    background[start_row:end_row, start_col:end_col] = merged_roi
+
+    cv2.imwrite(output_path_img, background)
 
 def get_frames_per_interval(project_path, delay = 0.5, cadence = 4):
 
@@ -602,31 +653,3 @@ class get_alpha:
         print('delete')
 
 
-def merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img, offset_x=0, offset_y=0):
-    foreground = cv2.imread(lip_path_img)    
-    alpha = cv2.imread(alpha_path_img)
-    background = cv2.imread(background_path_img)
-
-    # Add offset to foreground image
-    rows, cols, channels = foreground.shape
-    M = np.float32([[1, 0, offset_x], [0, 1, offset_y]])
-    foreground = cv2.warpAffine(foreground, M, (cols, rows))
-    alpha = cv2.warpAffine(alpha, M, (cols, rows))
-
-    # Convert uint8 to float
-    foreground = foreground.astype(float)
-    background = background.astype(float)
-
-    # Normalize the alpha mask to keep intensity between 0 and 1
-    alpha = alpha.astype(float)/255
-
-    # Multiply the foreground with the alpha matte
-    foreground = cv2.multiply(alpha, foreground)
-
-    # Multiply the background with ( 1 - alpha )
-    background = cv2.multiply(1.0 - alpha, background)
-
-    # Add the masked foreground and background.
-    outImage = cv2.add(foreground, background)
-
-    cv2.imwrite(output_path_img, outImage)
