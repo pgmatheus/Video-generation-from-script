@@ -41,6 +41,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
 
+#
+from moviepy.editor import concatenate_audioclips, AudioFileClip
+
 
 
 #example usage:
@@ -119,7 +122,11 @@ alp.run = ('./input_img.png','./output_file_location.png')
 del alp """
 
 # from scripts_2.utilities import merge_bg
-""" merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img, offset_x=0, offset_y=200, w_res = 400, h_res = 320) """
+""" merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img,
+offset_x=0, offset_y=200, w_res = 400, h_res = 320) """
+
+# from scripts_2.utilities import merge_audio_inside_folder
+""" def merge_audio_inside_folder(audio_root_folder, merged_audio_folder, duration = [0]) """
 
 def create_video_from_pngs(directory_path, output_file_path, music_path='', temp_video= 'F:/gg/templates/temp_video.mp4', fps=60, w = 1920, h = 1080):
     image_paths = []
@@ -450,14 +457,10 @@ def split_text_to_dict(text):
     return result
 
 
-def merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img, offset_x=0, offset_y=0, resize_ratio=0.25, w_res=0, h_res=0):
+def merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img, offset_x=0, offset_y=0, w_res=0, h_res=0):
     foreground = cv2.imread(lip_path_img)
     alpha = cv2.imread(alpha_path_img)
     background = cv2.imread(background_path_img)
-
-    # Resize foreground and alpha images
-    """ foreground = cv2.resize(foreground, None, fx=resize_ratio, fy=resize_ratio)
-    alpha = cv2.resize(alpha, None, fx=resize_ratio, fy=resize_ratio) """
 
     if w_res != 0 and h_res != 0:
         foreground = cv2.resize(foreground, [w_res,h_res])
@@ -579,6 +582,41 @@ def get_subtitle_times(srts, frames = 15, delay = 0.5):
     acc = acc + srt_time/frames
   audio_duration = [round(num/15,3) for num in srts]
   return audio_duration, srt_interval
+
+
+
+
+
+
+
+def merge_audio_inside_folder(audio_root_folder, merged_audio_folder, duration=[0]):
+    # get all the wav files
+    audio_clips = []
+    cont = 0
+    for dirpath, dirnames, filenames in os.walk(audio_root_folder):
+        for filename in filenames:
+            if filename.endswith(".wav"):
+                # Get the full file path
+                file_path = os.path.join(dirpath, filename)
+                # Load the audio file using PyDub
+                audio_segment = AudioSegment.from_wav(file_path)
+                if duration[0] != 0:
+                    current_audio_duration = audio_segment.duration_seconds
+                    if current_audio_duration < duration[cont]:
+                        # Set the duration of the audio segment using slicing
+                        diff = duration[cont] - current_audio_duration
+                        second_of_silence = AudioSegment.silent(duration=round(diff,3)*1000)
+                        audio_segment = audio_segment + second_of_silence
+                audio_clips.append(audio_segment)
+                cont = cont + 1
+
+    # Concatenate the audio segments using PyDub
+    final_clip = AudioSegment.empty()
+    for clip in audio_clips:
+        final_clip += clip
+
+    # Export the final concatenated audio clip to a WAV file
+    final_clip.export(os.path.join(merged_audio_folder, "full.wav"), format="wav")
 
 
 class get_alpha:
