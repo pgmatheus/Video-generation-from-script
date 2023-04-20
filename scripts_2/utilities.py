@@ -33,6 +33,16 @@ import shutil
 #
 import re
 
+#
+import torchvision.transforms as transforms
+from MODNet.src.models.modnet import MODNet
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from PIL import Image
+
+
+
 #example usage:
 
 # high img res
@@ -102,23 +112,14 @@ remove_temp_folder(temp_folder) """
 """ final_final_deforum, audio_duration, srt_interval =
 get_frames_per_interval(project_folder, 0.65, 4) #root  project_folder, delay and cadence"""
 
+# from scripts_2.utilities import get_alpha
 
-""" def create_video_from_pngs(directory_path, output_file_path, fps=60, w = 1920, h = 1080):
-    image_paths = []
-    for root, dirs, files in os.walk(directory_path):
-        for file in files:
-            if file.endswith('.png'):
-                image_paths.append(os.path.join(root, file))
-    if not image_paths:
-        print('No PNG images found in directory:', directory_path)
-        return
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    video_writer = cv2.VideoWriter(output_file_path, fourcc, fps, (w, h), True)
-    for image_path in image_paths:
-        image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
-        image = cv2.resize(image,(w,h))
-        video_writer.write(image)
-    video_writer.release() """
+""" alp = get_alpha()
+alp.run = ('./input_img.png','./output_file_location.png')
+del alp """
+
+# from scripts_2.utilities import merge_bg
+""" merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img, offset_x=0, offset_y=0) """
 
 def create_video_from_pngs(directory_path, output_file_path, music_path='', temp_video= 'F:/gg/templates/temp_video.mp4', fps=60, w = 1920, h = 1080):
     image_paths = []
@@ -527,3 +528,105 @@ def get_subtitle_times(srts, frames = 15, delay = 0.5):
     acc = acc + srt_time/frames
   audio_duration = [round(num/15,3) for num in srts]
   return audio_duration, srt_interval
+
+
+class get_alpha:
+    def __init__(self):
+        self.ref_size = 512
+        self.ckpt_path = './models/modnet_photographic_portrait_matting.ckpt'
+        self.modnet = MODNet(backbone_pretrained=False)
+        self.modnet = nn.DataParallel(self.modnet)    
+        if torch.cuda.is_available():
+            self.modnet = self.modnet.cuda()
+            self.weights = torch.load(self.ckpt_path)
+        else:
+            self.weights = torch.load(self.ckpt_path, map_location=torch.device('cpu'))
+        self.modnet.load_state_dict(self.weights)
+        self.modnet.eval()
+        self.im_transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ]
+        )
+    def run(self,input_path_img, output_path_img):
+        im = Image.open(input_path_img)
+
+        # unify image channels to 3
+        im = np.asarray(im)
+        if len(im.shape) == 2:
+            im = im[:, :, None]
+        if im.shape[2] == 1:
+            im = np.repeat(im, 3, axis=2)
+        elif im.shape[2] == 4:
+            im = im[:, :, 0:3]
+
+        # convert image to PyTorch tensor
+        im = Image.fromarray(im)
+        im = self.im_transform(im)
+
+        # add mini-batch dim
+        im = im[None, :, :, :]
+
+        # resize image for input
+        im_b, im_c, im_h, im_w = im.shape
+        if max(im_h, im_w) < self.ref_size or min(im_h, im_w) > self.ref_size:
+            if im_w >= im_h:
+                im_rh = self.ref_size
+                im_rw = int(im_w / im_h * self.ref_size)
+            elif im_w < im_h:
+                im_rw = self.ref_size
+                im_rh = int(im_h / im_w * self.ref_size)
+        else:
+            im_rh = im_h
+            im_rw = im_w
+        
+        im_rw = im_rw - im_rw % 32
+        im_rh = im_rh - im_rh % 32
+        im = F.interpolate(im, size=(im_rh, im_rw), mode='area')
+
+        # inference
+        _, _, matte = self.modnet(im.cuda() if torch.cuda.is_available() else im, True)
+
+        # resize and save matte
+        matte = F.interpolate(matte, size=(im_h, im_w), mode='area')
+        matte = matte[0][0].data.cpu().numpy()
+        Image.fromarray(((matte * 255).astype('uint8')), mode='L').save(output_path_img)
+
+    def __del__(self):
+        del self.modnet
+        del self.weights
+        del self.im_transform
+        torch.cuda.empty_cache()
+        gc.collect()
+        print('delete')
+
+
+def merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img, offset_x=0, offset_y=0):
+    foreground = cv2.imread(lip_path_img)    
+    alpha = cv2.imread(alpha_path_img)
+    background = cv2.imread(background_path_img)
+
+    # Add offset to foreground image
+    rows, cols, channels = foreground.shape
+    M = np.float32([[1, 0, offset_x], [0, 1, offset_y]])
+    foreground = cv2.warpAffine(foreground, M, (cols, rows))
+    alpha = cv2.warpAffine(alpha, M, (cols, rows))
+
+    # Convert uint8 to float
+    foreground = foreground.astype(float)
+    background = background.astype(float)
+
+    # Normalize the alpha mask to keep intensity between 0 and 1
+    alpha = alpha.astype(float)/255
+
+    # Multiply the foreground with the alpha matte
+    foreground = cv2.multiply(alpha, foreground)
+
+    # Multiply the background with ( 1 - alpha )
+    background = cv2.multiply(1.0 - alpha, background)
+
+    # Add the masked foreground and background.
+    outImage = cv2.add(foreground, background)
+
+    cv2.imwrite(output_path_img, outImage)
