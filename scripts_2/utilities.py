@@ -118,7 +118,7 @@ get_frames_per_interval(project_folder, 0.65, 4) #root  project_folder, delay an
 # from scripts_2.utilities import get_alpha
 
 """ alp = get_alpha()
-alp.run = ('./input_img.png','./output_file_location.png')
+alp.run('./input_img.png','./output_file_location.png')
 del alp """
 
 # from scripts_2.utilities import merge_bg
@@ -126,7 +126,11 @@ del alp """
 offset_x=0, offset_y=200, w_res = 400, h_res = 320) """
 
 # from scripts_2.utilities import merge_audio_inside_folder
-""" def merge_audio_inside_folder(audio_root_folder, merged_audio_folder, duration = [0]) """
+""" def merge_audio_inside_folder(audio_root_folder, merged_audio_folder,
+duration = [0]) """
+
+# from scripts_2.utilities import add_music_background
+""" add_music_background(main_audio_location, background_audio_location, output_audio_location) """
 
 def create_video_from_pngs(directory_path, output_file_path, music_path='', temp_video= 'F:/gg/templates/temp_video.mp4', fps=60, w = 1920, h = 1080):
     image_paths = []
@@ -189,8 +193,10 @@ class high_img:
         self.upscale = upscale
         img_mode = 'RGBA'
         # R-ESRGAN + Anime
-        self.model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=6, num_grow_ch=32, scale=4)
-        model_path_x4 = "./realesrgan/RealESRGAN_x4plus_anime_6B.pth"
+        """ self.model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=6, num_grow_ch=32, scale=4)
+        model_path_x4 = "./realesrgan/RealESRGAN_x4plus_anime_6B.pth" """
+        self.model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
+        model_path_x4 = "./realesrgan/RealESRGAN_x4plus.pth"
         self.upsampler = RealESRGANer(
                 scale=netscale,
                 model_path=model_path_x4,
@@ -525,6 +531,7 @@ def get_frames_per_interval(project_path, delay = 0.5, cadence = 4):
     frames_integer_part = round(temp_val*15)
     temp_frames_deforum.append(frames_integer_part)
 
+
   
   # calculate the frames needed of each deforum animation
   for index in range(len(temp_frames_deforum)):
@@ -536,7 +543,7 @@ def get_frames_per_interval(project_path, delay = 0.5, cadence = 4):
           if not os.path.exists(f"{project_path}\\img\\{index2:07d}\\0000000.png") and cond == False:
             cont = cont + temp_frames_deforum[index2]
           else:
-            cond == True
+            cond = True
         final_temp_deforum.append(cont)
     else:
       final_temp_deforum.append(0)
@@ -584,7 +591,23 @@ def get_subtitle_times(srts, frames = 15, delay = 0.5):
   return audio_duration, srt_interval
 
 
+def add_music_background(main_audio_location, background_audio_location, output_audio_location, volume = 3):
+    main_audio = AudioSegment.from_file(main_audio_location)
 
+    # Load the background audio file
+    background_audio = AudioSegment.from_file(background_audio_location)
+
+    # Lower the volume of the background audio
+    background_audio = background_audio + volume  # Adjust the volume level as needed
+
+    # Set the duration of the background audio to be the same as the main audio
+    background_audio = background_audio[:len(main_audio)]
+
+    # Add the background audio to the main audio
+    final_audio = main_audio.overlay(background_audio, loop=True)
+
+    # Export the final audio to a file
+    final_audio.export(output_audio_location, format="wav")
 
 
 
