@@ -132,6 +132,12 @@ duration = [0]) """
 # from scripts_2.utilities import add_music_background
 """ add_music_background(main_audio_location, background_audio_location, output_audio_location) """
 
+
+# from scripts_2.utilities import remove_background
+
+""" remove_background(original_image_path, alpha_image_path,'./image_with_background_removed.png') """
+
+
 def create_video_from_pngs(directory_path, output_file_path, music_path='', temp_video= 'F:/gg/templates/temp_video.mp4', fps=60, w = 1920, h = 1080):
     image_paths = []
     if os.path.exists(output_file_path):
@@ -463,6 +469,8 @@ def split_text_to_dict(text):
     return result
 
 
+
+
 def merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img, offset_x=0, offset_y=0, w_res=0, h_res=0):
     foreground = cv2.imread(lip_path_img)
     alpha = cv2.imread(alpha_path_img)
@@ -506,6 +514,53 @@ def merge_bg(lip_path_img, alpha_path_img, background_path_img, output_path_img,
 
     # Add the masked foreground and ROI of the background
     merged_roi = cv2.add(foreground, roi_bg)
+
+    # Place the merged ROI back into the background image
+    background[start_row:end_row, start_col:end_col] = merged_roi
+
+    cv2.imwrite(output_path_img, background)
+
+def remove_background(lip_path_img, alpha_path_img, output_path_img, offset_x=0, offset_y=0, w_res=0, h_res=0):
+    foreground = cv2.imread(lip_path_img)
+    alpha = cv2.imread(alpha_path_img)
+    
+    if w_res != 0 and h_res != 0:
+        foreground = cv2.resize(foreground, [w_res,h_res])
+        alpha = cv2.resize(alpha, [w_res,h_res])
+
+    # Convert uint8 to float
+    foreground = foreground.astype(float)
+    alpha = alpha.astype(float)/255
+
+    # Get the dimensions of the foreground image
+    rows_fg, cols_fg, channels_fg = foreground.shape
+
+    # Create a white background image with the same size as the foreground image
+    background = np.ones_like(foreground) * 255
+
+    # Calculate the starting and ending row and column indices for placing the foreground image in the background
+    start_row = max(0, offset_y)
+    end_row = min(offset_y + rows_fg, background.shape[0])
+    start_col = max(0, offset_x)
+    end_col = min(offset_x + cols_fg, background.shape[1])
+
+    # Calculate the actual offset to be used after adjusting for the starting indices
+    offset_x_actual = start_col - offset_x
+    offset_y_actual = start_row - offset_y
+
+    # Multiply the foreground with the alpha matte
+    foreground = cv2.multiply(alpha, foreground)
+
+    # Add the offset to the foreground image
+    M = np.float32([[1, 0, offset_x_actual], [0, 1, offset_y_actual]])
+    foreground = cv2.warpAffine(foreground, M, (end_col - start_col, end_row - start_row))
+
+    # Multiply the background with (1 - alpha)
+    background_roi = background[start_row:end_row, start_col:end_col]
+    background_roi = cv2.multiply(1.0 - alpha, background_roi)
+
+    # Add the masked foreground and ROI of the background
+    merged_roi = cv2.add(foreground, background_roi)
 
     # Place the merged ROI back into the background image
     background[start_row:end_row, start_col:end_col] = merged_roi
