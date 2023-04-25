@@ -579,10 +579,12 @@ def get_frames_per_interval(project_path, delay = 0.5, cadence = 4):
     for filename in os.listdir(os.path.join(f"{project_path}\\audio\\{folder_name}")):
       duration = sf.SoundFile(os.path.join(f"{project_path}\\audio\\{folder_name}\\{filename}"))
       durations.append(duration.frames / duration.samplerate)
+    
+  print(durations)
 
   #min frames needed
   for index, i in enumerate(durations):
-    temp_val = i + delay
+    temp_val = i # + delay
     frames_integer_part = round(temp_val*15)
     temp_frames_deforum.append(frames_integer_part)
 
@@ -695,7 +697,8 @@ def merge_audio_inside_folder(audio_root_folder, merged_audio_folder, duration=[
 
     # Export the final concatenated audio clip to a WAV file
     final_clip.export(os.path.join(merged_audio_folder, "full.wav"), format="wav")
-
+    audio_segment = AudioSegment.from_wav(f'{merged_audio_folder}/full.wav')
+    current_audio_duration = audio_segment.duration_seconds
 
 class get_alpha:
     def __init__(self):
