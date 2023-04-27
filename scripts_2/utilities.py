@@ -580,7 +580,6 @@ def get_frames_per_interval(project_path, delay = 0.5, cadence = 4):
       duration = sf.SoundFile(os.path.join(f"{project_path}\\audio\\{folder_name}\\{filename}"))
       durations.append(duration.frames / duration.samplerate)
     
-  print(durations)
 
   #min frames needed
   for index, i in enumerate(durations):
@@ -638,7 +637,7 @@ def adjust_subtitles(subtitle, animation, cad):
           acc = -1
   return subtitle
       
-def get_subtitle_times(srts, frames = 15, delay = 0.5):
+def get_subtitle_times(srts, frames = 15, delay = 0):
   srt_interval = {}
   acc = 0
   for index, srt_time in enumerate(srts):    
