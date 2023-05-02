@@ -26,7 +26,7 @@ cursed_doll_test = {
         ],
     'n_frames_music':
         [   
-           0,
-           
-        ]
+           0,           
+        ],
+    'title': ['The Cursed Doll']
 }

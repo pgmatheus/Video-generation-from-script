@@ -44,7 +44,8 @@ from PIL import Image
 #
 from moviepy.editor import concatenate_audioclips, AudioFileClip
 
-
+#
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 #example usage:
 
@@ -135,7 +136,15 @@ duration = [0]) """
 
 # from scripts_2.utilities import remove_background
 
-""" remove_background(original_image_path, alpha_image_path,'./image_with_background_removed.png') """
+""" remove_background(original_image_path,
+alpha_image_path,'./image_with_background_removed.png') """
+
+# from scripts_2.utilities import insert_text_img
+
+""" img = "./0000000.png"
+out = "./example_image_with_bleeding_text.png"
+text = 'Untold report: The Cursed  Doll'
+insert_text_img(img,out, text) """
 
 
 def create_video_from_pngs(directory_path, output_file_path, music_path='', temp_video= 'F:/gg/templates/temp_video.mp4', fps=60, w = 1920, h = 1080):
@@ -413,12 +422,12 @@ def copy_file_and_rename(file_path,destination_folder,new_name):
 
 
 
-def retrieve_frames(path_input_video, path_output_frames): 
+def retrieve_frames(path_input_video, path_output_frames, frame_start = 0): 
     # Open the video file
     video = cv2.VideoCapture(path_input_video)
 
     # Initialize frame counter
-    frame_count = 0
+    frame_count = frame_start
 
     # Loop through each frame in the video
     while True:
@@ -438,6 +447,7 @@ def retrieve_frames(path_input_video, path_output_frames):
 
     # Release the video file
     video.release()
+    return frame_count
 
 def remove_temp_folder(temp_folder):
     if os.path.exists(temp_folder):
@@ -567,28 +577,30 @@ def remove_background(lip_path_img, alpha_path_img, output_path_img, offset_x=0,
 
     cv2.imwrite(output_path_img, background)
 
-def get_frames_per_interval(project_path, delay = 0.5, cadence = 4):
+def get_frames_per_interval(project_path, delay = 0.5, frames = 60, cadence = 4, using_deforum = False, intro = True, intro_duration = 3):
 
   durations = []
   temp_frames_deforum = []
   final_temp_deforum = []
 
+  sum_cont = 0
 
   #get durations of each audio
   for folder_name in os.listdir(os.path.join(f"{project_path}\\audio\\")):
     for filename in os.listdir(os.path.join(f"{project_path}\\audio\\{folder_name}")):
       duration = sf.SoundFile(os.path.join(f"{project_path}\\audio\\{folder_name}\\{filename}"))
+      
+      sum_cont = sum_cont + duration.frames / duration.samplerate
       durations.append(duration.frames / duration.samplerate)
-    
 
   #min frames needed
   for index, i in enumerate(durations):
     temp_val = i # + delay
-    frames_integer_part = round(temp_val*15)
+    frames_integer_part = round(temp_val*frames)
     temp_frames_deforum.append(frames_integer_part)
 
 
-  
+
   # calculate the frames needed of each deforum animation
   for index in range(len(temp_frames_deforum)):
     cont = 0
@@ -604,21 +616,24 @@ def get_frames_per_interval(project_path, delay = 0.5, cadence = 4):
     else:
       final_temp_deforum.append(0)
 
+   
 
+  if using_deforum:
+    final_final_deforum = [0] * len(final_temp_deforum)
 
+    # recalculate frames for deforum precision
+    for index, i in enumerate(final_temp_deforum):
+        
+        if i != 0:
+            final_final_deforum[index] = final_temp_deforum[index] + final_temp_deforum[index]%(cadence) + 1
+        else:
+            final_final_deforum[index] = 0
+  else:
+        final_final_deforum = final_temp_deforum
 
-  final_final_deforum = [0] * len(final_temp_deforum)
-
-  # recalculate frames for deforum precision
-  for index, i in enumerate(final_temp_deforum):
-    
-    if i != 0:
-      final_final_deforum[index] = final_temp_deforum[index] + final_temp_deforum[index]%(cadence) + 1
-    else:
-      final_final_deforum[index] = 0
   srt_frames_needed_adjusted = adjust_subtitles(temp_frames_deforum,final_final_deforum,cadence)
   
-  audio_duration, srt_interval = get_subtitle_times(srt_frames_needed_adjusted)
+  audio_duration, srt_interval = get_subtitle_times(srt_frames_needed_adjusted, intro=intro, intro_duration=intro_duration)
   return final_final_deforum, audio_duration, srt_interval
 
 
@@ -637,13 +652,20 @@ def adjust_subtitles(subtitle, animation, cad):
           acc = -1
   return subtitle
       
-def get_subtitle_times(srts, frames = 15, delay = 0):
+def get_subtitle_times(srts, frames = 60, delay = 0, intro=True, intro_duration=3):
   srt_interval = {}
   acc = 0
-  for index, srt_time in enumerate(srts):    
+  if intro:
+    start = 1
+    srt_interval[0] = {'start_time': round(0,3), "end_time": round(intro_duration,3)}
+    acc = intro_duration
+  else:
+     start = 0
+     
+  for index, srt_time in enumerate(srts, start=start):           
     srt_interval[index] = {'start_time': round(acc + delay,3), "end_time": round(acc  + srt_time/frames,3)}
     acc = acc + srt_time/frames
-  audio_duration = [round(num/15,3) for num in srts]
+  audio_duration = [round(num/frames,3) for num in srts]
   return audio_duration, srt_interval
 
 
@@ -666,6 +688,50 @@ def add_music_background(main_audio_location, background_audio_location, output_
     final_audio.export(output_audio_location, format="wav")
 
 
+
+def insert_text_img(init_img_path, out_img_path, text, img_resize = (1920, 1080), blur_radius = 4, font = "F:\\gg\\Chiller.ttf", font_size = 150, y_offset = 200 ):
+    # Load the image
+    img = Image.open(init_img_path)
+
+    # Convert the image to RGBA mode
+    img = img.convert("RGBA")
+
+    # Resize the image
+    img = img.resize(img_resize)
+
+    # Create a copy of the image and apply a gaussian blur to it
+    blur_img = img.filter(ImageFilter.GaussianBlur(radius=blur_radius))
+
+    # Create a drawing context
+    draw = ImageDraw.Draw(blur_img)
+
+    # Set the font
+    font = ImageFont.truetype(font, font_size) # Horror-inspired font at 150pt size
+
+    # Set the text and color
+    color = (255, 0, 0) # Blood-red color
+
+    # Get the size of the text
+    text_size = draw.textsize(text, font=font)
+
+    # Calculate the position of the text (centered horizontally and slightly above the middle vertically)
+    x = (img.width - text_size[0]) / 2
+    y = (img.height - text_size[1]) / 2 - y_offset
+
+    # Create a new image for the drop shadow
+    shadow_img = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    shadow_draw = ImageDraw.Draw(shadow_img)
+
+    # Draw the text with the drop shadow
+    shadow_draw.text((x+5, y+5), text, font=font, fill=(255, 0, 0, 150))
+    shadow_draw.text((x, y), text, fill=color, font=font)
+
+    # Merge the drop shadow and blurred text images
+    img = Image.alpha_composite(blur_img, shadow_img)
+    img = img.convert("RGB")
+
+    # Save the image with the red text
+    img.save(out_img_path)
 
 
 def merge_audio_inside_folder(audio_root_folder, merged_audio_folder, duration=[0]):

@@ -64,5 +64,6 @@ To this day, I am still plagued by the doll's malevolent spirit. I have tried ev
         [   
             0,
            
-        ]
+        ],
+    'title': ['The Cursed Doll']
 }
