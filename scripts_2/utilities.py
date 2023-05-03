@@ -632,7 +632,7 @@ def get_frames_per_interval(project_path, delay = 0.5, frames = 60, cadence = 4,
         final_final_deforum = final_temp_deforum
 
   srt_frames_needed_adjusted = adjust_subtitles(temp_frames_deforum,final_final_deforum,cadence)
-  
+
   audio_duration, srt_interval = get_subtitle_times(srt_frames_needed_adjusted, intro=intro, intro_duration=intro_duration)
   return final_final_deforum, audio_duration, srt_interval
 
@@ -662,7 +662,8 @@ def get_subtitle_times(srts, frames = 60, delay = 0, intro=True, intro_duration=
   else:
      start = 0
      
-  for index, srt_time in enumerate(srts, start=start):           
+  for index, srt_time in enumerate(srts, start=start): 
+
     srt_interval[index] = {'start_time': round(acc + delay,3), "end_time": round(acc  + srt_time/frames,3)}
     acc = acc + srt_time/frames
   audio_duration = [round(num/frames,3) for num in srts]
